@@ -9,6 +9,11 @@ import aws_cdk.aws_apigateway as apigw
 import aws_cdk.aws_apigatewayv2 as apigw2
 # from aws_cdk import aws_apigatewayv2_integrations as apigw2_integrations
 # from aws_cdk.aws_apigatewayv2_integrations import HttpUrlIntegration, HttpLambdaIntegration
+from aws_cdk.aws_apigatewayv2_integrations import HttpLambdaIntegration, HttpUrlIntegration
+from aws_cdk.aws_apigatewayv2_authorizers import HttpLambdaAuthorizer
+from aws_cdk.aws_apigatewayv2_authorizers import HttpIamAuthorizer
+
+
 
 class ApigwLambdaStack(Stack):
 
@@ -26,22 +31,51 @@ class ApigwLambdaStack(Stack):
         
         # create a lambda function for post method
         # You have to pass the value of the body to the lambda function, such as: key=value or {"key": "value"} pair
-        # post_lambda = _lambda.Function(self, "post_lambda",
-        #                               function_name="post_method_lambda",
-        #                               runtime=_lambda.Runtime.PYTHON_3_12,
-        #                               code=_lambda.Code.from_asset("lambda"),
-        #                               handler="post_method.lambda_handler"
-        #                               )
+        post_lambda = _lambda.Function(self, "post_lambda",
+                                      function_name="post_method_lambda",
+                                      runtime=_lambda.Runtime.PYTHON_3_12,
+                                      code=_lambda.Code.from_asset("lambda"),
+                                      handler="post_method.lambda_handler"
+                                      )
         
         #3. Create an API Gateway
         #3.1 Create a REST API
-        # apigwGetPost = apigw2.HttpApi(self, "api_gateway",
-        #                     #   rest_api_name="APIGw_get_post",
-        #                       description="This is a test API Gateway for GET and POST methods using api keys",
-        #                     #   deploy=True,
-        #                     #   deploy_options=apigw.StageOptions(stage_name="test")
+        
+        apigwGetPost = apigw2.HttpApi(self, "api_gateway",
+                              api_name="APIGw_get_post",
+                              description="This is a test API Gateway for GET and POST methods using api keys"
+                            )
+        # # add stage
+        apigwGetPost.add_stage = apigw2.HttpStage(
+            self, "api_gateway_stage",
+            http_api=apigwGetPost,
+            stage_name="testStage",
+            auto_deploy=True,  
+        )
+        
+        get_lambda_integration = HttpLambdaIntegration("GetLambdaIntegration", handler=get_lambda)
+        apigwGetPost.add_routes(
+            path="/get",
+            methods=[apigw2.HttpMethod.GET],
+            integration=get_lambda_integration
+        )
 
-        #                       )
+        post_lambda_integration = HttpLambdaIntegration("PostLambdaIntegration", handler=post_lambda)
+        apigwGetPost.add_routes(
+            path="/post",
+            methods=[apigw2.HttpMethod.POST],
+            integration=post_lambda_integration
+        )
+
+#    books_integration = HttpLambdaIntegration("BooksIntegration", books_default_fn)
+
+#     http_api = apigwv2.HttpApi(self, "HttpApi")
+
+#     http_api.add_routes(
+#         path="/books",
+#         methods=[apigwv2.HttpMethod.GET],
+#         integration=books_integration
+#     )
         # lambda_integration = HttpLambdaIntegration("BooksIntegration", handler=get_lambda)
         # # # add Get and Post methods to the API Gateway
         # apigwGetPost.add_routes(
