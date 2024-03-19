@@ -26,30 +26,32 @@ class ApigwLambdaStack(Stack):
         
         # create a lambda function for post method
         # You have to pass the value of the body to the lambda function, such as: key=value or {"key": "value"} pair
-        # post_lambda = _lambda.Function(self, "post_lambda",
-        #                               function_name="post_method_lambda",
-        #                               runtime=_lambda.Runtime.PYTHON_3_12,
-        #                               code=_lambda.Code.from_asset("lambda"),
-        #                               handler="post_method.lambda_handler"
-        #                               )
+        post_lambda = _lambda.Function(self, "post_lambda",
+                                      function_name="post_method_lambda",
+                                      runtime=_lambda.Runtime.PYTHON_3_12,
+                                      code=_lambda.Code.from_asset("lambda"),
+                                      handler="post_method.lambda_handler"
+                                      )
         
         #3. Create an API Gateway
         #3.1 Create a REST API
-        # apigwGetPost = apigw2.HttpApi(self, "api_gateway",
-        #                     #   rest_api_name="APIGw_get_post",
-        #                       description="This is a test API Gateway for GET and POST methods using api keys",
-        #                     #   deploy=True,
-        #                     #   deploy_options=apigw.StageOptions(stage_name="test")
+        api = apigw.RestApi(self, "api",
+                            rest_api_name="rest_api",
+                            description="This is a rest api",
+                            default_method_options=apigw.MethodOptions(
+                                authorization_type=apigw.AuthorizationType.NONE
+                            )
+                            )
+        # # get method
+        get_method = api.root.add_method("GET", apigw.LambdaIntegration(get_lambda))
+        # post method
+        post_method = api.root.add_method("POST", apigw.LambdaIntegration(post_lambda))
 
-        #                       )
-        # lambda_integration = HttpLambdaIntegration("BooksIntegration", handler=get_lambda)
-        # # # add Get and Post methods to the API Gateway
-        # apigwGetPost.add_routes(
-        #     path="/get",
-        #     methods=[apigw2.HttpMethod.GET],
-        #     integration=lambda_integration
-        # )
-        # apigwGetPost.root.add_method("POST", apigw2.LambdaIntegration(post_lambda))
+        # # create stage
+        stage = apigw.StageOptions(
+            stage_name="test", 
+            logging_level=apigw.MethodLoggingLevel.INFO
+            )
 
         # create usage plan
         # plan = apigw.("UsagePlan",
