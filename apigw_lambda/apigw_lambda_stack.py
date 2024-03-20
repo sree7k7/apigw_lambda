@@ -1,14 +1,18 @@
 from aws_cdk import (
-    # Duration,
+    Duration,
     Stack,
+    RemovalPolicy,
     # aws_sqs as sqs,
 )
 from constructs import Construct
+from aws_cdk import aws_iam as iam
 import aws_cdk.aws_lambda as _lambda
 import aws_cdk.aws_apigateway as apigw
 import aws_cdk.aws_apigatewayv2 as apigw2
+import aws_cdk.aws_cloudwatch as cloudwatch
 # from aws_cdk import aws_apigatewayv2_integrations as apigw2_integrations
 # from aws_cdk.aws_apigatewayv2_integrations import HttpUrlIntegration, HttpLambdaIntegration
+
 
 class ApigwLambdaStack(Stack):
 
@@ -38,31 +42,51 @@ class ApigwLambdaStack(Stack):
         api = apigw.RestApi(self, "api",
                             rest_api_name="rest_api",
                             description="This is a rest api",
+                            deploy=True,
+                            endpoint_types=[apigw.EndpointType.REGIONAL],
+                            deploy_options=apigw.StageOptions(
+                                stage_name="dev",
+                                logging_level=apigw.MethodLoggingLevel.INFO,
+                                data_trace_enabled=True,
+                                metrics_enabled=True,
+                                tracing_enabled=True
+                            ),
+                            retain_deployments=False,
+                            default_cors_preflight_options=apigw.CorsOptions(
+                                allow_origins=apigw.Cors.ALL_ORIGINS,
+                                allow_methods=apigw.Cors.ALL_METHODS
+                            ),
                             default_method_options=apigw.MethodOptions(
                                 authorization_type=apigw.AuthorizationType.NONE
-                            )
+                            ),
+                            cloud_watch_role=True,
+                            cloud_watch_role_removal_policy=RemovalPolicy.DESTROY,
+                            policy=iam.PolicyDocument(
+                                statements=[iam.PolicyStatement(
+                                    effect=iam.Effect.ALLOW,
+                                    principals=[iam.AnyPrincipal()],
+                                    # actions=["lambda:InvokeFunction"],
+                                    actions=["*"],
+                                    resources=["*"]
+                            )])
                             )
         # # get method
         get_method = api.root.add_method("GET", apigw.LambdaIntegration(get_lambda))
         # post method
         post_method = api.root.add_method("POST", apigw.LambdaIntegration(post_lambda))
 
-        # # create stage
-        stage = apigw.StageOptions(
-            stage_name="test", 
-            logging_level=apigw.MethodLoggingLevel.INFO
-            )
 
         # create usage plan
-        # plan = apigw.("UsagePlan",
-        #     name="Easy",
-        #     throttle=apigw2.ThrottleSettings(
-        #         rate_limit=10,
-        #         burst_limit=2
-        #     )
-        # )
+        plan = api.add_usage_plan("UsagePlan",
+                                  name="usage_plan",
+                                  description="This is a usage plan",
+                                  api_stages=[apigw.UsagePlanPerApiStage(
+                                      api=api,
+                                      stage=api.deployment_stage
+                                  )]
+                                  )
 
-        # key = api.add_api_key("ApiKey")
+        key = api.add_api_key("ApiKey")
         # plan.add_api_key(key)
         # To associate a plan to a given RestAPI stage:
 

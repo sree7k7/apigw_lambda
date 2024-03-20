@@ -130,13 +130,86 @@
    "Type": "AWS::ApiGateway::RestApi",
    "Properties": {
     "Description": "This is a rest api",
-    "Name": "rest_api"
+    "EndpointConfiguration": {
+     "Types": [
+      "REGIONAL"
+     ]
+    },
+    "Name": "rest_api",
+    "Policy": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    }
    },
    "Metadata": {
     "aws:cdk:path": "ApigwLambdaStack/api/Resource"
    }
   },
-  "apiDeployment149F1294701a26bdb5a75c74a2a7723d3c6bc29a": {
+  "apiCloudWatchRoleAC81D93E": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ApigwLambdaStack/api/CloudWatchRole/Resource"
+   }
+  },
+  "apiAccount57E28B43": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "apiCloudWatchRoleAC81D93E",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "apiC8550315"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ApigwLambdaStack/api/Account"
+   }
+  },
+  "apiDeployment149F1294ae1c315d060274841c7fd390b11d30d8": {
    "Type": "AWS::ApiGateway::Deployment",
    "Properties": {
     "Description": "This is a rest api",
@@ -146,25 +219,85 @@
    },
    "DependsOn": [
     "apiGETECF0BD67",
+    "apiOPTIONS5A1027A6",
     "apiPOST36368FF5"
    ],
    "Metadata": {
     "aws:cdk:path": "ApigwLambdaStack/api/Deployment/Resource"
    }
   },
-  "apiDeploymentStageprod896C8101": {
+  "apiDeploymentStagedev96712F43": {
    "Type": "AWS::ApiGateway::Stage",
    "Properties": {
     "DeploymentId": {
-     "Ref": "apiDeployment149F1294701a26bdb5a75c74a2a7723d3c6bc29a"
+     "Ref": "apiDeployment149F1294ae1c315d060274841c7fd390b11d30d8"
     },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": true,
+      "HttpMethod": "*",
+      "LoggingLevel": "INFO",
+      "MetricsEnabled": true,
+      "ResourcePath": "/*"
+     }
+    ],
     "RestApiId": {
      "Ref": "apiC8550315"
     },
-    "StageName": "prod"
+    "StageName": "dev",
+    "TracingEnabled": true
+   },
+   "DependsOn": [
+    "apiAccount57E28B43"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ApigwLambdaStack/api/DeploymentStage.dev/Resource"
+   }
+  },
+  "apiOPTIONS5A1027A6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "apiC8550315",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "apiC8550315"
+    }
    },
    "Metadata": {
-    "aws:cdk:path": "ApigwLambdaStack/api/DeploymentStage.prod/Resource"
+    "aws:cdk:path": "ApigwLambdaStack/api/Default/OPTIONS/Resource"
    }
   },
   "apiGETApiPermissionApigwLambdaStackapi68FB2791GET017ABDFB": {
@@ -200,7 +333,7 @@
        },
        "/",
        {
-        "Ref": "apiDeploymentStageprod896C8101"
+        "Ref": "apiDeploymentStagedev96712F43"
        },
        "/GET/"
       ]
@@ -330,7 +463,7 @@
        },
        "/",
        {
-        "Ref": "apiDeploymentStageprod896C8101"
+        "Ref": "apiDeploymentStagedev96712F43"
        },
        "/POST/"
       ]
@@ -427,10 +560,50 @@
     "aws:cdk:path": "ApigwLambdaStack/api/Default/POST/Resource"
    }
   },
+  "apiUsagePlan1B3969C7": {
+   "Type": "AWS::ApiGateway::UsagePlan",
+   "Properties": {
+    "ApiStages": [
+     {
+      "ApiId": {
+       "Ref": "apiC8550315"
+      },
+      "Stage": {
+       "Ref": "apiDeploymentStagedev96712F43"
+      },
+      "Throttle": {}
+     }
+    ],
+    "Description": "This is a usage plan",
+    "UsagePlanName": "usage_plan"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ApigwLambdaStack/api/UsagePlan/Resource"
+   }
+  },
+  "apiApiKey9B5BC9C9": {
+   "Type": "AWS::ApiGateway::ApiKey",
+   "Properties": {
+    "Enabled": true,
+    "StageKeys": [
+     {
+      "RestApiId": {
+       "Ref": "apiC8550315"
+      },
+      "StageName": {
+       "Ref": "apiDeploymentStagedev96712F43"
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ApigwLambdaStack/api/ApiKey/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/01PW26DQAw8S/4Xp8AJklT9qxqlB4gccKkLu4uwVxFC3D27S1Tla8aeGT8qKOsS3nZ4l6Jp+2LgGyzfik1vYuu6DGhvLcLyEVyj7J05/bhXfqbJskisVsNoYbn4gZKQcDVSX1GEVOCQINZwDE1PekQhgyN3qHTHOeZI9DByjj7pO42Dny05Td2XKt7X5SUbiX4fpobyzE/SX98mcWPr+q+bfEPKsOuS4yvoGPS5crNEfvKuZc0fnec4wu1rKCuodn/CXEzBKVuCy4YPrvRGfEABAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/01Qy26DMBD8ltyNW+ALSKpeqqooVc7RxmypC9iIXStCiH/P2kRNTjuzj5mxC52XuX7dwZUy03RZby96+WYwnZLWeelhuDSgl/fgDFvv1OHHPeMap8ESCVuVhUEvR99jHMS6KirPQIRMuopFuN4H0yHvgVDBaFtgvMIsd0hcjTadPmBljA+O1RuOvZ8HFCjdJyZR2+S3ATn1YTKY5D+Rf30Th3d0Itmpe0jJH0S8PnBOdgmt67+OSrGjtnVt3PgKPAa+p9xWBB+8ayynT6hnsXIvpc4LXez+yNpskhfYAfVxqzfMMksxcwEAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "ApigwLambdaStack/CDKMetadata/Default"
@@ -458,7 +631,7 @@
       },
       "/",
       {
-       "Ref": "apiDeploymentStageprod896C8101"
+       "Ref": "apiDeploymentStagedev96712F43"
       },
       "/"
      ]
